@@ -1,3 +1,38 @@
+## ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: watchdog
+  namespace: kube-system
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: watchdog
+  namespace: kube-system
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+
+--- 
+
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: watchdog
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: watchdog
+subjects:
+- kind: ServiceAccount
+  name: watchdog
+
+---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -14,11 +49,13 @@ spec:
       labels:
         app: watchdog
     spec:
+      serviceAccountName: watchdog
       nodeSelector:
         watchdog: "true"
       containers:
       - name: watchdog
         image: ewoutp/kubewatchdog:latest
+        imagePullPolicy: Always
         args:
           - --pod=$(POD_NAME)
           - --namespace=$(POD_NAMESPACE)

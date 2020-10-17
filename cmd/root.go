@@ -74,6 +74,7 @@ func runRootCmd(cmd *cobra.Command, args []string) {
 func monitorKubernetes(ctx context.Context, log zerolog.Logger, c client.Client,
 	podName, podNamespace string, interval time.Duration, connectionGood chan bool) {
 	log = log.With().Str("name", podName).Str("namespace", podNamespace).Logger()
+	lastResult := false
 	for {
 		select {
 		case <-ctx.Done():
@@ -87,8 +88,13 @@ func monitorKubernetes(ctx context.Context, log zerolog.Logger, c client.Client,
 		if err := c.Get(ctx, key, &pod); err != nil {
 			log.Debug().Err(err).Msg("Failed to get pod")
 			connectionGood <- false
+			lastResult = false
 		} else {
 			connectionGood <- true
+			if !lastResult {
+				log.Info().Msg("Kubernetes connection ok")
+				lastResult = true
+			}
 		}
 	}
 }
@@ -103,6 +109,7 @@ func updateWatchdog(ctx context.Context, log zerolog.Logger, watchdogPath string
 		return
 	}
 	defer wdog.Close()
+	log.Info().Msg("Watchdog opened")
 
 	nextTrigger := time.Now().Add(time.Second)
 	recentErrors := 0
