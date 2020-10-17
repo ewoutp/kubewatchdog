@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: watchdog
+  namespace: kube-system
+  labels:
+    app: watchdog
+spec:
+  selector:
+    matchLabels:
+      app: watchdog
+  template:
+    metadata:
+      labels:
+        app: watchdog
+    spec:
+      nodeSelector:
+        watchdog: "true"
+      containers:
+      - name: watchdog
+        image: ewoutp/kubewatchdog:latest
+        args:
+          - --pod=$(POD_NAME)
+          - --namespace=$(POD_NAMESPACE)
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - ALL
+        volumeMounts:
+        - name: dev
+          mountPath: /dev
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+      volumes:
+      - name: dev
+        hostPath:
+          path: /dev
